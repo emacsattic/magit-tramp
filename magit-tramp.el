@@ -44,9 +44,20 @@
 (defun magit-tramp-handle-file-writable-p (filename)
   nil)
 
+(defun magit-tramp-handle-file-exists-p (filename)
+  (with-parsed-tramp-file-name filename target
+    (let ((default-directory (magit-tramp-resolve-host target-host)))
+      (=
+       (magit-git-exit-code "cat-file" "-t"
+                            (format "%s:%s" target-user
+                                    target-localname))
+       0))))
+
 (defun magit-tramp-handle-expand-file-name
     (filename &optional default-directory)
-  filename)
+  (if (or (not default-directory) (string-prefix-p "/" filename))
+      filename
+      (concat default-directory filename)))
 
 (defun magit-tramp-handle-file-remote-p (filename
                                          &optional identification connected)
@@ -132,29 +143,35 @@
                (or beg 0) end))
       (list filename (magit-tramp-file-size filename))))
 
+(defun magit-tramp-handle-insert-directory
+    (filename switches &optional wildcard full-directory-p)
+  nil)
+
 (defconst magit-tramp-file-name-handler-alist
   '(
-    ;; (load . tramp-handle-load)
-    ;; (file-name-as-directory . tramp-handle-file-name-as-directory)
-    ;; (file-name-directory . tramp-handle-file-name-directory)
-    ;; (file-name-nondirectory . tramp-handle-file-name-nondirectory)
+    (load . tramp-handle-load)
+    (file-name-as-directory . tramp-handle-file-name-as-directory)
+    (file-name-directory . tramp-handle-file-name-directory)
+    (file-name-nondirectory . tramp-handle-file-name-nondirectory)
     (file-truename . identity)
-    ;; (file-exists-p . tramp-sh-handle-file-exists-p)
+    (file-exists-p . magit-tramp-handle-file-exists-p)
     (file-directory-p . magit-tramp-handle-file-directory-p)
-    ;; (file-executable-p . tramp-sh-handle-file-executable-p)
-    ;; (file-readable-p . tramp-sh-handle-file-readable-p)
+    ;; executable iff directory
+    (file-executable-p . magit-tramp-handle-file-directory-p)
+    ;; readable iff exists
+    (file-readable-p . magit-tramp-handle-file-exists-p)
     ;; (file-regular-p . tramp-handle-file-regular-p)
     ;; (file-symlink-p . tramp-handle-file-symlink-p)
     (file-writable-p . magit-tramp-handle-file-writable-p)
     ;; (file-ownership-preserved-p . tramp-sh-handle-file-ownership-preserved-p)
     ;; (file-newer-than-file-p . tramp-sh-handle-file-newer-than-file-p)
     (file-attributes . magit-tramp-handle-file-attributes)
-    ;; (file-modes . tramp-handle-file-modes)
-    ;; (directory-files . tramp-handle-directory-files)
+    (file-modes . tramp-handle-file-modes)
+    (directory-files . tramp-handle-directory-files)
     ;; (directory-files-and-attributes
     ;;  . tramp-sh-handle-directory-files-and-attributes)
     ;; (file-name-all-completions . tramp-sh-handle-file-name-all-completions)
-    ;; (file-name-completion . tramp-handle-file-name-completion)
+    (file-name-completion . tramp-handle-file-name-completion)
     ;; (add-name-to-file . tramp-sh-handle-add-name-to-file)
     ;; (copy-file . tramp-sh-handle-copy-file)
     ;; (copy-directory . tramp-sh-handle-copy-directory)
@@ -164,28 +181,28 @@
     ;; (make-directory . tramp-sh-handle-make-directory)
     ;; (delete-directory . tramp-sh-handle-delete-directory)
     ;; (delete-file . tramp-sh-handle-delete-file)
-    ;; (directory-file-name . tramp-handle-directory-file-name)
+    (directory-file-name . tramp-handle-directory-file-name)
     ;; ;; `executable-find' is not official yet.
     ;; (executable-find . tramp-sh-handle-executable-find)
     ;; (start-file-process . tramp-sh-handle-start-file-process)
     ;; (process-file . tramp-sh-handle-process-file)
     ;; (shell-command . tramp-handle-shell-command)
-    ;; (insert-directory . tramp-sh-handle-insert-directory)
+    (insert-directory . magit-tramp-handle-insert-directory)
     (expand-file-name . magit-tramp-handle-expand-file-name)
-    ;; (substitute-in-file-name . tramp-handle-substitute-in-file-name)
+    (substitute-in-file-name . tramp-handle-substitute-in-file-name)
     ;; (file-local-copy . tramp-sh-handle-file-local-copy)
     (file-remote-p . magit-tramp-handle-file-remote-p)
     (insert-file-contents . magit-tramp-handle-insert-file-contents)
     ;; (insert-file-contents-literally
     ;;  . tramp-sh-handle-insert-file-contents-literally)
     ;; (write-region . tramp-sh-handle-write-region)
-    ;; (find-backup-file-name . tramp-handle-find-backup-file-name)
+    (find-backup-file-name . tramp-handle-find-backup-file-name)
     ;; (make-auto-save-file-name . tramp-sh-handle-make-auto-save-file-name)
-    ;; (unhandled-file-name-directory . tramp-handle-unhandled-file-name-directory)
+    (unhandled-file-name-directory . ignore)
     ;; (dired-compress-file . tramp-sh-handle-dired-compress-file)
     ;; (dired-recursive-delete-directory
     ;;  . tramp-sh-handle-dired-recursive-delete-directory)
-    ;; (dired-uncache . tramp-handle-dired-uncache)
+    (dired-uncache . tramp-handle-dired-uncache)
     ;; (set-visited-file-modtime . tramp-sh-handle-set-visited-file-modtime)
     ;; (verify-visited-file-modtime . tramp-sh-handle-verify-visited-file-modtime)
     ;; (file-selinux-context . tramp-sh-handle-file-selinux-context)
