@@ -59,10 +59,6 @@
       filename
       (concat default-directory filename)))
 
-(defun magit-tramp-handle-file-remote-p (filename
-                                         &optional identification connected)
-  t)
-
 (defun magit-tramp-resolve-host (host)
   (let ((elem (assoc host magit-tramp-hosts-alist)))
     (or (and elem
@@ -191,7 +187,7 @@
     (expand-file-name . magit-tramp-handle-expand-file-name)
     (substitute-in-file-name . tramp-handle-substitute-in-file-name)
     ;; (file-local-copy . tramp-sh-handle-file-local-copy)
-    (file-remote-p . magit-tramp-handle-file-remote-p)
+    (file-remote-p . tramp-handle-file-remote-p)
     (insert-file-contents . magit-tramp-handle-insert-file-contents)
     ;; (insert-file-contents-literally
     ;;  . tramp-sh-handle-insert-file-contents-literally)
