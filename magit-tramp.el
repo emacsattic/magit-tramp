@@ -74,6 +74,14 @@
                          (format "%s:%s" target-user
                                  target-localname))))))
 
+(defun magit-tramp-handle-file-directory-p (filename)
+  (with-parsed-tramp-file-name filename target
+     (let ((default-directory (magit-tramp-resolve-host target-host)))
+       (string= "tree"
+                (magit-git-string "cat-file" "-t"
+                                  (format "%s:%s" target-user
+                                          target-localname))))))
+
 (defun magit-tramp-handle-file-attributes (filename &optional id-format)
   (unless id-format (setq id-format 'integer))
   (ignore-errors
@@ -90,10 +98,11 @@
                (gid (if (equal id-format 'string) "nogroup" -1))
                (inode (tramp-get-inode v))
                (device (tramp-get-device v))
-               (size (magit-tramp-file-size filename)))
+               (size (magit-tramp-file-size filename))
+               (dir (magit-tramp-handle-file-directory-p filename)))
 
           ;; Check result.
-          (list nil              ;0 file type
+          (list dir              ;0 file type
                 -1	           ;1 link count
                 uid	           ;2 uid
                 gid	           ;3 gid
@@ -101,7 +110,7 @@
                 '(0 0)           ;5 mtime
                 '(0 0)	   ;6 ctime
                 size                ;7 size
-                "-r--r--r--"     ;8 mode
+                (if dir "dr-xr-xr-x" "-r--r--r--")     ;8 mode
                 nil	           ;9 gid weird
                 inode	           ;10 inode number
                 device           ;11 file system number
@@ -131,7 +140,7 @@
     ;; (file-name-nondirectory . tramp-handle-file-name-nondirectory)
     (file-truename . identity)
     ;; (file-exists-p . tramp-sh-handle-file-exists-p)
-    ;; (file-directory-p . tramp-sh-handle-file-directory-p)
+    (file-directory-p . magit-tramp-handle-file-directory-p)
     ;; (file-executable-p . tramp-sh-handle-file-executable-p)
     ;; (file-readable-p . tramp-sh-handle-file-readable-p)
     ;; (file-regular-p . tramp-handle-file-regular-p)
