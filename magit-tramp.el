@@ -324,6 +324,7 @@
     (insert-directory . magit-tramp-handle-insert-directory)
     (expand-file-name . magit-tramp-handle-expand-file-name)
     (substitute-in-file-name . tramp-handle-substitute-in-file-name)
+    ;; TODO: implement to make ediff work
     (file-local-copy . ignore)
     (file-remote-p . tramp-handle-file-remote-p)
     (insert-file-contents . magit-tramp-handle-insert-file-contents)
