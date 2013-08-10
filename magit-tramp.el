@@ -280,6 +280,39 @@
 	       (beginning-of-line))))
 	 entries)))))
 
+(defun magit-tramp-handle-file-local-copy (filename)
+  (with-parsed-tramp-file-name filename nil
+    (unless (magit-tramp-handle-file-exists-p filename)
+      (tramp-error
+       v 'file-error
+       "Cannot make local copy of non-existing file `%s'" filename))
+
+    (let* ((tmpfile (tramp-compat-make-temp-file filename)))
+      (condition-case err
+          (save-excursion
+            (with-temp-buffer
+              (set-buffer-multibyte nil)
+              (insert-file-contents filename)
+
+              ;; Unset `file-name-handler-alist'.  Otherwise,
+              ;; epa-file gets confused.
+              (let (file-name-handler-alist
+                    (coding-system-for-write 'binary))
+                (write-region (point-min) (point-max) tmpfile)))
+
+            ;; Set proper permissions.
+            (set-file-modes tmpfile (tramp-default-file-modes filename))
+            ;; Set local user ownership.
+            (tramp-set-file-uid-gid tmpfile))
+
+	;; Error handling.
+	((error quit)
+	 (delete-file tmpfile)
+	 (signal (car err) (cdr err))))
+
+      (run-hooks 'tramp-handle-file-local-copy-hook)
+      tmpfile)))
+
 (defconst magit-tramp-file-name-handler-alist
   '(
     (load . tramp-handle-load)
@@ -325,7 +358,7 @@
     (expand-file-name . magit-tramp-handle-expand-file-name)
     (substitute-in-file-name . tramp-handle-substitute-in-file-name)
     ;; TODO: implement to make ediff work
-    (file-local-copy . ignore)
+    (file-local-copy . magit-tramp-handle-file-local-copy)
     (file-remote-p . tramp-handle-file-remote-p)
     (insert-file-contents . magit-tramp-handle-insert-file-contents)
     ;; TODO: do we need more logic here ?
