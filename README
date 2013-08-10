@@ -17,5 +17,4 @@ examples of use:
     
     (find-file "/git:maint@magit:/")
 
-    ;; kinda broken for now, requires proper file-local-copy implementation    
     (ediff-directories "/git:maint@magit:/" "/git:master@magit:/" nil)
