@@ -1,6 +1,7 @@
 ;;; magit-tramp.el --- git method for TRAMP
 
 ;; Copyright (C) 2013  Yann Hodique
+;; Copyright (C) 1998-2013 Free Software Foundation, Inc.
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
 ;; Keywords:
@@ -9,8 +10,8 @@
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 2, or (at your option)
-;; any later version.
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
 
 ;; This file is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,13 +19,7 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
-
-;;; Commentary:
-
-;;
+;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Code:
 
@@ -367,7 +362,6 @@
     (insert-directory . magit-tramp-handle-insert-directory)
     (expand-file-name . magit-tramp-handle-expand-file-name)
     (substitute-in-file-name . tramp-handle-substitute-in-file-name)
-    ;; TODO: implement to make ediff work
     (file-local-copy . magit-tramp-handle-file-local-copy)
     (file-remote-p . tramp-handle-file-remote-p)
     (insert-file-contents . magit-tramp-handle-insert-file-contents)
