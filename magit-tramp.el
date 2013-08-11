@@ -5,6 +5,7 @@
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
 ;; Keywords:
+;; Version: 0.1.0
 ;; Package-Requires: ((magit "1.2.0"))
 ;; URL: https://github.com/sigma/magit-tramp
 
