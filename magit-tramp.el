@@ -4,6 +4,8 @@
 
 ;; Author: Yann Hodique <yann.hodique@gmail.com>
 ;; Keywords:
+;; Package-Requires: ((magit "1.3.0"))
+;; URL: https://github.com/sigma/magit-tramp
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -29,6 +31,12 @@
 (require 'magit)
 (require 'tramp)
 
+(defgroup magit-tramp nil
+  "git method for TRAMP"
+  :link '(url-link "https://github.com/sigma/magit-tramp")
+  :prefix "magit-tramp"
+  :group 'magit)
+
 ;;;###autoload
 (defconst magit-tramp-method "git"
   "TRAMP method for browsing git repositories.")
@@ -41,8 +49,10 @@
 (defsubst magit-tramp-filerev (user localname)
   (format "%s:%s" user (substring localname 1)))
 
-(defvar magit-tramp-hosts-alist nil
-  "Alist of host -> directory")
+(defcustom magit-tramp-hosts-alist nil
+  "Alist of host -> directory."
+  :group 'magit-tramp
+  :type '(alist :key-type string :value-type directory))
 
 (defun magit-tramp-handle-file-writable-p (filename)
   nil)
