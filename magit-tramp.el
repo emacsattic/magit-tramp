@@ -203,6 +203,13 @@
                       (file-name-directory filename)
                       nil nil nil 'string)))
 
+        (unless (string= localname "/")
+          (push '(".." t -1 "nobody" "nogroup" (0 0) (0 0) (0 0)
+                  0 "dr-xr-xr-x" nil
+                  (tramp-get-inode v)
+                  (tramp-get-device v))
+                entries))
+
 	(when wildcard
 	  ;; (string-match "\\." base)
 	  ;; (setq base (replace-match "\\\\." nil nil base))
@@ -320,8 +327,7 @@
       tmpfile)))
 
 (defconst magit-tramp-file-name-handler-alist
-  '(
-    (load . tramp-handle-load)
+  '((load . tramp-handle-load)
     (file-name-as-directory . tramp-handle-file-name-as-directory)
     (file-name-directory . tramp-handle-file-name-directory)
     (file-name-nondirectory . tramp-handle-file-name-nondirectory)
