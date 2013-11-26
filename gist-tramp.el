@@ -96,13 +96,11 @@
                     (or (not target-owner)
                         (string= target-owner (oref (oref gist :user) :login)))
                     (or (not target-file)
-                        (and
-                         (member target-file
-                                 (mapcar
-                                  (lambda (f) (oref f :filename)) files))
-                         t)))))
+                        (loop for f in files
+                           if (string= target-file (oref f :filename))
+                           return f)))))
                 (target-owner
-                 (and (oref (gh-gist-list api target-owner) :data) t))
+                 (oref (gh-gist-list api target-owner) :data))
                 (t t))))
     (error nil)))
 
