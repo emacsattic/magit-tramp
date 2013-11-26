@@ -30,6 +30,7 @@
 
 (require 'gh-gist)
 (require 'gh-profile)
+(require 'gh-users)
 
 ;;;###autoload
 (defconst gist-tramp-method "gist"
@@ -115,8 +116,12 @@
   (condition-case nil
       (with-gist-parsed-tramp-file-name filename target
         (and (gist-tramp-handle-file-exists-p filename)
-             ;; TODO: compare owner to current user
-             ))))
+             (string= target-owner
+                      (oref
+                       (oref (gh-users-get
+                              (gist-tramp-get-gh-api 'gh-users-api))
+                             :data)
+                       :login))))))
 
 (defconst gist-tramp-file-name-handler-alist
   '((load . tramp-handle-load)
