@@ -40,9 +40,10 @@
   (let ((v (tramp-dissect-file-name filename)))
     (string= (tramp-file-name-method v) gist-tramp-method)))
 
-(defun gist-tramp-get-gh-api (host)
+(defun gist-tramp-get-gh-api (host &optional cls)
   (let* ((gh-profile-current-profile host))
-    (gh-gist-api "api" :sync t :cache t :num-retries 1)))
+    (funcall (or cls 'gh-gist-api)
+             "api" :sync t :cache t :num-retries 1)))
 
 (defun gist-tramp-dissect-file-name (localname)
   (let ((l (split-string localname "/" t)))
