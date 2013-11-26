@@ -121,6 +121,59 @@
                              :data)
                        :login))))))
 
+(defun gist-tramp-handle-file-newer-than-file-p (file1 file2)
+  ;; bare minimum to make this consistent
+  (gist-tramp-handle-file-exists-p file1))
+
+(defun gist-tramp-file-size (filename)
+  (or
+   (and (not (gist-tramp-handle-file-directory-p filename))
+        (let ((f (gist-tramp-handle-file-exists-p filename)))
+          (oref f :size)))
+   1))
+
+(defun gist-tramp-handle-file-attributes (filename &optional id-format)
+  (unless id-format (setq id-format 'integer))
+  (ignore-errors
+    (with-parsed-tramp-file-name filename nil
+      (with-tramp-file-property
+	  v localname (format "file-attributes-%s" id-format)
+        ;; Reading just the filename entry via "dir localname" is not
+        ;; possible, because when filename is a directory, some
+        ;; smbclient versions return the content of the directory, and
+        ;; other versions don't.  Therefore, the whole content of the
+        ;; upper directory is retrieved, and the entry of the filename
+        ;; is extracted from.
+        (let* ((uid (if (equal id-format 'string) "nobody" -1))
+               (gid (if (equal id-format 'string) "nogroup" -1))
+               (inode (tramp-get-inode v))
+               (device (tramp-get-device v))
+               (size (gist-tramp-file-size filename))
+               (dir (gist-tramp-handle-file-directory-p filename)))
+
+          ;; Check result.
+          (list dir              ;0 file type
+                -1	           ;1 link count
+                uid	           ;2 uid
+                gid	           ;3 gid
+                '(0 0)	   ;4 atime
+                '(0 0)           ;5 mtime
+                '(0 0)	   ;6 ctime
+                size                ;7 size
+                (if dir "dr-xr-xr-x" "-r--r--r--")     ;8 mode
+                nil	           ;9 gid weird
+                inode	           ;10 inode number
+                device           ;11 file system number
+                ))))))
+
+(defun gist-tramp-handle-directory-files-and-attributes
+    (directory &optional full match nosort id-format)
+  (mapcar (lambda (filename)
+            (cons filename (gist-tramp-handle-file-attributes
+                            (expand-file-name filename directory)
+                            id-format)))
+          (tramp-handle-directory-files directory)))
+
 (defconst gist-tramp-file-name-handler-alist
   '((load . tramp-handle-load)
     (file-name-as-directory . tramp-handle-file-name-as-directory)
@@ -138,13 +191,13 @@
     (file-symlink-p . ignore)
     (file-writable-p . gist-tramp-handle-file-writable-p)
     (file-ownership-preserved-p . ignore)
-    (file-newer-than-file-p . magit-tramp-handle-file-newer-than-file-p)
-    (file-attributes . magit-tramp-handle-file-attributes)
+    (file-newer-than-file-p . gist-tramp-handle-file-newer-than-file-p)
+    (file-attributes . gist-tramp-handle-file-attributes)
     (file-modes . tramp-handle-file-modes)
     (directory-files . tramp-handle-directory-files)
     (directory-files-and-attributes
-     . magit-tramp-handle-directory-files-and-attributes)
-    (file-name-all-completions . magit-tramp-handle-file-name-all-completions)
+     . gist-tramp-handle-directory-files-and-attributes)
+    (file-name-all-completions . gist-tramp-handle-file-name-all-completions)
     (file-name-completion . tramp-handle-file-name-completion)
     (add-name-to-file . ignore)
     (copy-file . ignore)
