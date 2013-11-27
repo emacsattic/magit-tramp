@@ -192,7 +192,7 @@
                                  :files)))
                        (target-owner
                         (mapcar (lambda (g) (oref g :id))
-                                (oref (gh-gist-list api) :data)))
+                                (oref (gh-gist-list api target-owner) :data)))
                        (t
                         (list (gist-tramp-gh-current-user target-host))))))
            (delete nil
