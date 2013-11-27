@@ -37,6 +37,16 @@
 (defconst gist-tramp-method "gist"
   "TRAMP method for browsing gists.")
 
+(defgroup gist-tramp nil
+  "Gist TRAMP method."
+  :group 'tramp)
+
+(defcustom gist-tramp-following-alist '(("github"))
+  "List of people who have gists of interests, per gh profile."
+  :type '(alist :key-type string
+                :value-type (repeat string))
+  :group 'gist-tramp)
+
 ;;;###autoload
 (defsubst gist-tramp-file-name-p (filename)
   (let ((v (tramp-dissect-file-name filename)))
@@ -194,7 +204,9 @@
                         (mapcar (lambda (g) (oref g :id))
                                 (oref (gh-gist-list api target-owner) :data)))
                        (t
-                        (list (gist-tramp-gh-current-user target-host))))))
+                        (cons (gist-tramp-gh-current-user target-host)
+                              (cdr (assoc target-host
+                                          gist-tramp-following-alist)))))))
            (delete nil
               (mapcar (lambda (name)
                         (and (string-prefix-p file name)
