@@ -47,6 +47,13 @@
     (funcall (or cls 'gh-gist-api)
              "api" :sync t :cache t :num-retries 1)))
 
+(defun gist-tramp-gh-current-user (host)
+  (oref
+   (oref (gh-users-get
+          (gist-tramp-get-gh-api host 'gh-users-api))
+         :data)
+   :login))
+
 (defun gist-tramp-dissect-file-name (localname)
   (let ((l (split-string localname "/" t)))
     (cond ((= (length l) 3)
@@ -112,19 +119,17 @@
              (gist-tramp-handle-file-exists-p filename)))))
 
 (defun gist-tramp-handle-file-writable-p (filename)
-  (condition-case nil
-      (with-gist-parsed-tramp-file-name filename target
-        (and (gist-tramp-handle-file-exists-p filename)
-             (string= target-owner
-                      (oref
-                       (oref (gh-users-get
-                              (gist-tramp-get-gh-api 'gh-users-api))
-                             :data)
-                       :login))))))
+  ;; (condition-case nil
+  ;;     (with-gist-parsed-tramp-file-name filename target
+  ;;       (and (gist-tramp-handle-file-exists-p filename)
+  ;;            (string= target-owner
+  ;;                     (gist-tramp-gh-current-user target-host)))))
+  )
 
 (defun gist-tramp-handle-file-newer-than-file-p (file1 file2)
   ;; bare minimum to make this consistent
-  (gist-tramp-handle-file-exists-p file1))
+  (and file1
+       (gist-tramp-handle-file-exists-p file1)))
 
 (defun gist-tramp-file-size (filename)
   (or
@@ -175,6 +180,205 @@
                             id-format)))
           (tramp-handle-directory-files directory)))
 
+(defun gist-tramp-handle-file-name-all-completions (file directory)
+  (with-gist-parsed-tramp-file-name directory target
+    (and (gist-tramp-handle-file-exists-p directory)
+         (let* ((api (gist-tramp-get-gh-api target-host))
+                (items
+                 (cond (target-gist
+                        (mapcar (lambda (f) (oref f :filename))
+                                (oref
+                                 (oref (gh-gist-get api target-gist) :data)
+                                 :files)))
+                       (target-owner
+                        (mapcar (lambda (g) (oref g :id))
+                                (oref (gh-gist-list api) :data)))
+                       (t
+                        (list (gist-tramp-gh-current-user target-host))))))
+           (delete nil
+              (mapcar (lambda (name)
+                        (and (string-prefix-p file name)
+                             name))
+                      items))))))
+
+(defun gist-tramp-handle-insert-directory
+  (filename switches &optional wildcard full-directory-p)
+  (setq filename (expand-file-name filename))
+  (if full-directory-p
+      ;; Called from `dired-add-entry'.
+      (setq filename (file-name-as-directory filename))
+    (setq filename (directory-file-name filename)))
+  (with-parsed-tramp-file-name filename nil
+    (save-match-data
+      (let ((base (file-name-nondirectory filename))
+	    (entries (gist-tramp-handle-directory-files-and-attributes
+                      (file-name-directory filename)
+                      nil nil nil 'string)))
+
+        (unless (string= localname "/")
+          (push `(".." t -1 "nobody" "nogroup" (0 0) (0 0) (0 0)
+                  0 "dr-xr-xr-x" nil
+                  ,(tramp-get-inode v)
+                  ,(tramp-get-device v))
+                entries))
+
+	(when wildcard
+	  ;; (string-match "\\." base)
+	  ;; (setq base (replace-match "\\\\." nil nil base))
+	  ;; (string-match "\\*" base)
+	  ;; (setq base (replace-match ".*" nil nil base))
+	  ;; (string-match "\\?" base)
+	  ;; (setq base (replace-match ".?" nil nil base))
+          )
+
+	;; Filter entries.
+	(setq entries
+	      (delq
+	       nil
+	       (if (or wildcard (zerop (length base)))
+		   ;; Check for matching entries.
+		   (mapcar
+		    (lambda (x)
+		      (when (string-match
+			     (format "^%s" base) (nth 0 x))
+			x))
+		    entries)
+		 ;; We just need the only and only entry FILENAME.
+		 (list (assoc base entries)))))
+
+	;; Sort entries.
+	(setq entries
+	      (sort
+	       entries
+	       (lambda (x y)
+		 (if (string-match "t" switches)
+		     ;; Sort by date.
+		     (tramp-time-less-p (nth 3 y) (nth 3 x))
+		   ;; Sort by name.
+		   (string-lessp (nth 0 x) (nth 0 y))))))
+
+	;; Handle "-F" switch.
+	(when (string-match "F" switches)
+	  (mapc
+	   (lambda (x)
+	     (when (not (zerop (length (car x))))
+	       (cond
+		((char-equal ?d (string-to-char (nth 1 x)))
+		 (setcar x (concat (car x) "/")))
+		((char-equal ?x (string-to-char (nth 1 x)))
+		 (setcar x (concat (car x) "*"))))))
+	   entries))
+
+	;; Print entries.
+        (mapc
+	 (lambda (x)
+	   (when (not (zerop (length (nth 0 x))))
+	     (let ((attr (ignore-errors
+                           (cdr x))))
+               (insert
+		(format
+		 "%10s %3d %-8s %-8s %8s %s "
+		 (or (nth 8 attr)) ; mode
+		 (or (nth 1 attr)) ; inode
+		 (or (nth 2 attr)) ; uid
+		 (or (nth 3 attr)) ; gid
+		 (or (nth 7 attr)) ; size
+		 (format-time-string
+		  (if (tramp-time-less-p
+		       (tramp-time-subtract (current-time) (nth 5 attr))
+		       tramp-half-a-year)
+		      "%b %e %R"
+		    "%b %e  %Y")
+		  (nth 5 attr)))) ; date
+	       ;; We mark the file name.  The inserted name could be
+	       ;; from somewhere else, so we use the relative file
+	       ;; name of `default-directory'.
+	       (let ((start (point)))
+		 (insert
+		  (format
+		   "%s\n"
+		   (file-relative-name
+		    (expand-file-name
+		     (nth 0 x) (file-name-directory filename)))))
+		 (put-text-property start (1- (point)) 'dired-filename t))
+	       (forward-line)
+	       (beginning-of-line))))
+	 entries)))))
+
+(defun gist-tramp-handle-expand-file-name (name &optional dir)
+  ;; If DIR is not given, use DEFAULT-DIRECTORY or "/".
+  (setq dir (or dir default-directory "/"))
+  ;; Unless NAME is absolute, concat DIR and NAME.
+  (unless (file-name-absolute-p name)
+    (setq name (concat (file-name-as-directory dir) name)))
+  ;; If NAME is not a Tramp file, run the real handler.
+  (if (not (tramp-connectable-p name))
+      (tramp-run-real-handler 'expand-file-name (list name nil))
+    ;; Dissect NAME.
+    (with-parsed-tramp-file-name name nil
+      (unless (tramp-run-real-handler 'file-name-absolute-p (list localname))
+	(setq localname (concat "~/" localname)))
+      (while (string-match "//" localname)
+	(setq localname (replace-match "/" t t localname)))
+      (let ((directory-sep-char ?/)
+	    (default-directory (tramp-compat-temporary-file-directory)))
+	(tramp-make-tramp-file-name
+	 method user host
+	 (tramp-drop-volume-letter
+	  (tramp-run-real-handler
+	   'expand-file-name (list localname)))
+	 hop)))))
+
+(defun gist-tramp-handle-insert-file-contents (filename &optional visit
+                                                          beg end replace)
+  (if replace
+      (list filename 0)
+      (when visit
+        (setq buffer-file-name filename))
+      (insert (substring
+               (with-gist-parsed-tramp-file-name filename target
+                 (string-as-multibyte
+                  (let* ((api (gist-tramp-get-gh-api target-host))
+                         (gist (oref (gh-gist-get api target-gist) :data)))
+                    (loop for f in (oref gist :files)
+                         if (string= target-file (oref f :filename))
+                         return (oref f :content)))))
+               (or beg 0) end))
+      (list filename (gist-tramp-file-size filename))))
+
+(defun gist-tramp-handle-file-local-copy (filename)
+  (with-parsed-tramp-file-name filename nil
+    (unless (gist-tramp-handle-file-exists-p filename)
+      (tramp-error
+       v 'file-error
+       "Cannot make local copy of non-existing file `%s'" filename))
+
+    (let* ((tmpfile (tramp-compat-make-temp-file filename)))
+      (condition-case err
+          (save-excursion
+            (with-temp-buffer
+              (set-buffer-multibyte nil)
+              (insert-file-contents filename)
+
+              ;; Unset `file-name-handler-alist'.  Otherwise,
+              ;; epa-file gets confused.
+              (let (file-name-handler-alist
+                    (coding-system-for-write 'binary))
+                (write-region (point-min) (point-max) tmpfile)))
+
+            ;; Set proper permissions.
+            (set-file-modes tmpfile (tramp-default-file-modes filename))
+            ;; Set local user ownership.
+            (tramp-set-file-uid-gid tmpfile))
+
+	;; Error handling.
+	((error quit)
+	 (delete-file tmpfile)
+	 (signal (car err) (cdr err))))
+
+      (run-hooks 'tramp-handle-file-local-copy-hook)
+      tmpfile)))
+
 (defconst gist-tramp-file-name-handler-alist
   '((load . tramp-handle-load)
     (file-name-as-directory . tramp-handle-file-name-as-directory)
@@ -215,15 +419,15 @@
     (start-file-process . ignore)
     (process-file . ignore)
     (shell-command . ignore)
-    (insert-directory . magit-tramp-handle-insert-directory)
-    (expand-file-name . magit-tramp-handle-expand-file-name)
+    (insert-directory . gist-tramp-handle-insert-directory)
+    (expand-file-name . gist-tramp-handle-expand-file-name)
     (substitute-in-file-name . tramp-handle-substitute-in-file-name)
-    (file-local-copy . magit-tramp-handle-file-local-copy)
+    (file-local-copy . gist-tramp-handle-file-local-copy)
     (file-remote-p . tramp-handle-file-remote-p)
-    (insert-file-contents . magit-tramp-handle-insert-file-contents)
+    (insert-file-contents . gist-tramp-handle-insert-file-contents)
     ;; TODO: do we need more logic here ?
     (insert-file-contents-literally
-     . magit-tramp-handle-insert-file-contents)
+     . gist-tramp-handle-insert-file-contents)
     (write-region . ignore)
     (find-backup-file-name . tramp-handle-find-backup-file-name)
     (make-auto-save-file-name . ignore)
