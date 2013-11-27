@@ -27,6 +27,7 @@
 ;;; Code:
 
 (require 'tramp)
+(require 'tramp-sh)
 
 (require 'gh-gist)
 (require 'gh-profile)
