@@ -129,12 +129,11 @@
              (gist-tramp-handle-file-exists-p filename)))))
 
 (defun gist-tramp-handle-file-writable-p (filename)
-  ;; (condition-case nil
-  ;;     (with-gist-parsed-tramp-file-name filename target
-  ;;       (and (gist-tramp-handle-file-exists-p filename)
-  ;;            (string= target-owner
-  ;;                     (gist-tramp-gh-current-user target-host)))))
-  )
+  (condition-case nil
+      (with-gist-parsed-tramp-file-name filename target
+        (and (gist-tramp-handle-file-exists-p filename)
+             (string= target-owner
+                      (gist-tramp-gh-current-user target-host))))))
 
 (defun gist-tramp-handle-file-newer-than-file-p (file1 file2)
   ;; bare minimum to make this consistent
@@ -176,7 +175,11 @@
                 '(0 0)           ;5 mtime
                 '(0 0)	   ;6 ctime
                 size                ;7 size
-                (if dir "dr-xr-xr-x" "-r--r--r--")     ;8 mode
+                (if dir
+                    "dr-xr-xr-x"
+                  (if (gist-tramp-handle-file-writable-p filename)
+                      "-rw-rw-rw-"
+                    "-r--r--r--"))  ;8 mode
                 nil	           ;9 gid weird
                 inode	           ;10 inode number
                 device           ;11 file system number
@@ -442,7 +445,7 @@
      . gist-tramp-handle-insert-file-contents)
     (write-region . ignore)
     (find-backup-file-name . tramp-handle-find-backup-file-name)
-    (make-auto-save-file-name . ignore)
+    (make-auto-save-file-name . tramp-handle-make-auto-save-file-name)
     (unhandled-file-name-directory . ignore)
     (dired-compress-file . ignore)
     (dired-recursive-delete-directory . ignore)
