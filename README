@@ -15,6 +15,6 @@ examples of use:
     
     (find-file "/git:master@magit:/")
     
-    (find-file "/git:maint@magit:/")
+    (find-file "/git:maint~42@magit:/")
 
     (ediff-directories "/git:maint@magit:/" "/git:master@magit:/" nil)

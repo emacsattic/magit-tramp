@@ -61,6 +61,12 @@
                             (magit-tramp-filerev target-user target-localname))
        0))))
 
+(defun magit-tramp-canonical-user (user host)
+  (if (string-match (rx (or "^" "~")) user)
+      (let ((default-directory (magit-tramp-resolve-host host)))
+        (magit-rev-parse user))
+    user))
+
 (defun magit-tramp-handle-expand-file-name (name &optional dir)
   ;; If DIR is not given, use DEFAULT-DIRECTORY or "/".
   (setq dir (or dir default-directory "/"))
@@ -79,7 +85,7 @@
       (let ((directory-sep-char ?/)
 	    (default-directory (tramp-compat-temporary-file-directory)))
 	(tramp-make-tramp-file-name
-	 method user host
+	 method (magit-tramp-canonical-user user host) host
 	 (tramp-drop-volume-letter
 	  (tramp-run-real-handler
 	   'expand-file-name (list localname)))
