@@ -168,12 +168,12 @@
         ;; other versions don't.  Therefore, the whole content of the
         ;; upper directory is retrieved, and the entry of the filename
         ;; is extracted from.
-        (let* ((uid (if (string= owner
-                                 (gist-tramp-gh-current-user host))
+        (let* ((myself (string= owner
+                                (gist-tramp-gh-current-user host)))
+               (uid (if myself
                         (plist-get gist-tramp-default-user id-format)
                       (if (equal id-format 'string) "nobody" -1)))
-               (gid (if (string= owner
-                                 (gist-tramp-gh-current-user host))
+               (gid (if myself
                         (plist-get gist-tramp-default-group id-format)
                       (if (equal id-format 'string) "nogroup" -1)))
                (inode (tramp-get-inode v))
@@ -191,7 +191,9 @@
                 '(0 0)	   ;6 ctime
                 size                ;7 size
                 (if dir
-                    "dr-xr-xr-x"
+                    (if myself
+                        "drwxr-xr-x"
+                      "dr-xr-xr-x")
                   (if (gist-tramp-handle-file-writable-p filename)
                       "-rw-rw-rw-"
                     "-r--r--r--"))  ;8 mode
