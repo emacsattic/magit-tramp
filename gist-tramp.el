@@ -448,6 +448,20 @@
                      collect f)))
       (gh-gist-edit api (clone gist :files files)))))
 
+(defun gist-tramp-handle-delete-file (filename &optional trash)
+  (with-gist-parsed-tramp-file-name filename target
+    (let* ((api (gist-tramp-get-gh-api target-host))
+           (gist (oref (gh-gist-get api target-gist) :data))
+           (files (oref gist :files)))
+      (setq files
+            (cons (make-instance 'gh-gist-gist-file
+                                 :filename target-file
+                                 :content nil)
+                  (loop for f in files
+                     if (not (string= target-file (oref f :filename)))
+                     collect f)))
+      (gh-gist-edit api (clone gist :files files)))))
+
 (defconst gist-tramp-file-name-handler-alist
   '((load . tramp-handle-load)
     (file-name-as-directory . tramp-handle-file-name-as-directory)
@@ -481,7 +495,7 @@
     (set-file-times . ignore)
     (make-directory . ignore)
     (delete-directory . ignore)
-    (delete-file . ignore)
+    (delete-file . gist-tramp-handle-delete-file)
     (directory-file-name . tramp-handle-directory-file-name)
     ;; `executable-find' is not official yet.
     (executable-find . ignore)
