@@ -498,8 +498,9 @@
     (insert-file-contents-literally
      . gist-tramp-handle-insert-file-contents)
     (write-region . gist-tramp-handle-write-region)
-    (find-backup-file-name . tramp-handle-find-backup-file-name)
-    (make-auto-save-file-name . tramp-handle-make-auto-save-file-name)
+    (find-backup-file-name . ignore)
+    ;; gists are versioned, no need to auto-save
+    (make-auto-save-file-name . ignore)
     (unhandled-file-name-directory . ignore)
     (dired-compress-file . ignore)
     (dired-recursive-delete-directory . ignore)
