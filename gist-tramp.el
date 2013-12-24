@@ -415,6 +415,36 @@
       (run-hooks 'tramp-handle-file-local-copy-hook)
       tmpfile)))
 
+(defun gist-tramp-handle-write-region (start end filename
+                                       &optional append visit
+                                         lockname mustbenew)
+  (with-gist-parsed-tramp-file-name filename target
+    (let* ((api (gist-tramp-get-gh-api target-host))
+           (gist (oref (gh-gist-get api target-gist) :data))
+           (files (oref gist :files))
+           (content ""))
+      (when append
+        (let ((file (loop for f in files
+                       if (string= target-file (oref f :filename))
+                       return f)))
+          (setq content (oref file :content))))
+      (setq content
+            (concat content
+                    (cond ((null start)
+                           (buffer-string))
+                          ((stringp start)
+                           start)
+                          (t
+                           (buffer-substring start end)))))
+      (setq files
+            (cons (make-instance 'gh-gist-gist-file
+                                 :filename target-file
+                                 :content content)
+                  (loop for f in files
+                     if (not (string= target-file (oref f :filename)))
+                     collect f)))
+      (gh-gist-edit api (clone gist :files files)))))
+
 (defconst gist-tramp-file-name-handler-alist
   '((load . tramp-handle-load)
     (file-name-as-directory . tramp-handle-file-name-as-directory)
@@ -464,7 +494,7 @@
     ;; TODO: do we need more logic here ?
     (insert-file-contents-literally
      . gist-tramp-handle-insert-file-contents)
-    (write-region . ignore)
+    (write-region . gist-tramp-handle-write-region)
     (find-backup-file-name . tramp-handle-find-backup-file-name)
     (make-auto-save-file-name . tramp-handle-make-auto-save-file-name)
     (unhandled-file-name-directory . ignore)
