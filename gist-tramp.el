@@ -372,16 +372,18 @@
       (list filename 0)
       (when visit
         (setq buffer-file-name filename))
-      (insert (substring
-               (with-gist-parsed-tramp-file-name filename target
-                 (string-as-multibyte
-                  (let* ((api (gist-tramp-get-gh-api target-host))
-                         (gist (oref (gh-gist-get api target-gist) :data)))
-                    (loop for f in (oref gist :files)
+      (ignore-errors
+        (insert (substring
+                 (with-gist-parsed-tramp-file-name filename target
+                   (string-as-multibyte
+                    (let* ((api (gist-tramp-get-gh-api target-host))
+                           (gist (oref (gh-gist-get api target-gist) :data)))
+                      (loop for f in (oref gist :files)
                          if (string= target-file (oref f :filename))
                          return (oref f :content)))))
-               (or beg 0) end))
-      (list filename (gist-tramp-file-size filename))))
+                 (or beg 0) end)))
+      (list filename (or (ignore-errors (gist-tramp-file-size filename))
+                         0))))
 
 (defun gist-tramp-handle-file-local-copy (filename)
   (with-parsed-tramp-file-name filename nil
