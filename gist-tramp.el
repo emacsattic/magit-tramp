@@ -140,9 +140,8 @@
 (defun gist-tramp-handle-file-writable-p (filename)
   (condition-case nil
       (with-gist-parsed-tramp-file-name filename target
-        (and (gist-tramp-handle-file-exists-p filename)
-             (string= target-owner
-                      (gist-tramp-gh-current-user target-host))))))
+        (string= target-owner
+                 (gist-tramp-gh-current-user target-host)))))
 
 (defun gist-tramp-handle-file-newer-than-file-p (file1 file2)
   ;; bare minimum to make this consistent
