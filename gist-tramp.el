@@ -47,6 +47,15 @@
                 :value-type (repeat string))
   :group 'gist-tramp)
 
+(let ((attrs (file-attributes "~" 'integer))
+      (rattrs (file-attributes "~" 'string)))
+  (defconst gist-tramp-default-user (list 'integer (nth 2 attrs)
+                                          'string (nth 2 rattrs))
+    "Default user.")
+  (defconst gist-tramp-default-group (list 'integer (nth 3 attrs)
+                                           'string (nth 3 rattrs))
+    "Default group."))
+
 ;;;###autoload
 (defsubst gist-tramp-file-name-p (filename)
   (let ((v (tramp-dissect-file-name filename)))
@@ -150,7 +159,7 @@
 (defun gist-tramp-handle-file-attributes (filename &optional id-format)
   (unless id-format (setq id-format 'integer))
   (ignore-errors
-    (with-parsed-tramp-file-name filename nil
+    (with-gist-parsed-tramp-file-name filename nil
       (with-tramp-file-property
 	  v localname (format "file-attributes-%s" id-format)
         ;; Reading just the filename entry via "dir localname" is not
@@ -159,8 +168,14 @@
         ;; other versions don't.  Therefore, the whole content of the
         ;; upper directory is retrieved, and the entry of the filename
         ;; is extracted from.
-        (let* ((uid (if (equal id-format 'string) "nobody" -1))
-               (gid (if (equal id-format 'string) "nogroup" -1))
+        (let* ((uid (if (string= owner
+                                 (gist-tramp-gh-current-user host))
+                        (plist-get gist-tramp-default-user id-format)
+                      (if (equal id-format 'string) "nobody" -1)))
+               (gid (if (string= owner
+                                 (gist-tramp-gh-current-user host))
+                        (plist-get gist-tramp-default-group id-format)
+                      (if (equal id-format 'string) "nogroup" -1)))
                (inode (tramp-get-inode v))
                (device (tramp-get-device v))
                (size (gist-tramp-file-size filename))
@@ -223,7 +238,7 @@
       ;; Called from `dired-add-entry'.
       (setq filename (file-name-as-directory filename))
     (setq filename (directory-file-name filename)))
-  (with-parsed-tramp-file-name filename nil
+  (with-gist-parsed-tramp-file-name filename nil
     (save-match-data
       (let ((base (file-name-nondirectory filename))
 	    (entries (gist-tramp-handle-directory-files-and-attributes
@@ -231,11 +246,21 @@
                       nil nil nil 'string)))
 
         (unless (string= localname "/")
-          (push `(".." t -1 "nobody" "nogroup" (0 0) (0 0) (0 0)
-                  0 "dr-xr-xr-x" nil
-                  ,(tramp-get-inode v)
-                  ,(tramp-get-device v))
-                entries))
+          (let* ((own (string= owner
+                           (gist-tramp-gh-current-user host)))
+                 (owner
+                  (if own
+                      (plist-get gist-tramp-default-user 'string)
+                    "nobody"))
+                 (group
+                  (if own
+                      (plist-get gist-tramp-default-group 'string)
+                    "nogroup")))
+            (push `(".." t -1 ,owner ,group (0 0) (0 0) (0 0)
+                         0 "dr-xr-xr-x" nil
+                         ,(tramp-get-inode v)
+                         ,(tramp-get-device v))
+                  entries)))
 
 	(when wildcard
 	  ;; (string-match "\\." base)
