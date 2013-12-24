@@ -290,10 +290,7 @@
 	       (let ((start (point)))
 		 (insert
 		  (format
-		   "%s\n"
-		   (file-relative-name
-		    (expand-file-name
-		     (nth 0 x) (file-name-directory filename)))))
+		   "%s\n" (nth 0 x)))
 		 (put-text-property start (1- (point)) 'dired-filename t))
 	       (forward-line)
 	       (beginning-of-line))))
