@@ -169,7 +169,7 @@
                  (string-as-multibyte
                   (let ((default-directory (magit-tramp-resolve-host
                                             target-host)))
-                    (magit-git-output
+                    (magit-git-insert
                      (list "cat-file" "-p"
                            (magit-tramp-filerev target-user
                                                 target-localname))))))
