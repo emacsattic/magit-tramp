@@ -47,14 +47,15 @@
                 :value-type (repeat string))
   :group 'gist-tramp)
 
-(let ((attrs (file-attributes "~" 'integer))
-      (rattrs (file-attributes "~" 'string)))
-  (defconst gist-tramp-default-user (list 'integer (nth 2 attrs)
-                                          'string (nth 2 rattrs))
-    "Default user.")
-  (defconst gist-tramp-default-group (list 'integer (nth 3 attrs)
-                                           'string (nth 3 rattrs))
-    "Default group."))
+(defconst gist-tramp-default-user
+  (list 'integer (nth 2 (file-attributes "~" 'integer))
+	'string  (nth 2 (file-attributes "~" 'string)))
+  "Default user.")
+
+(defconst gist-tramp-default-group
+  (list 'integer (nth 2 (file-attributes "~" 'integer))
+	'string  (nth 2 (file-attributes "~" 'string)))
+  "Default group.")
 
 ;;;###autoload
 (defsubst gist-tramp-file-name-p (filename)
